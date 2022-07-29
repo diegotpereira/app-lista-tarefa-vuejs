@@ -1,22 +1,26 @@
 <template>
     <main class="tarefa-lista">
         <div class="tarefa-lista-cabecalho">
-            <input type="checkbox" name="" id="" class="tarefa-lista-cabecalho-checkbox">
-            <input type="text" name="" id="" class="tarefa-lista-cabecalho-input" v-model="novaTarefa" autofocus @keydown="naEntradaChave">
+            <input type="checkbox" class="tarefa-lista-cabecalho-checkbox" v-model="principalCheckbox" @change="naAlteracaoPrincipalCheckbox">
+            <input type="text" class="tarefa-lista-cabecalho-input" v-model="novaTarefa" autofocus @keydown="naEntradaChave">
         </div>
-        <tarefa-item v-for="(tarefa, index) in tarefaLista" :key="index" :model-value="tarefa" />
-        <div class="tarefa-lista-footer">
+        <tarefa-item v-for="(tarefa, index) in tarefaLista" :key="index" :modeloValor="tarefa" 
+        @update:modeloValor="value => naAtualizacaoTarefaItem(value, index)"
+                    @na-alteracao="value => naAlteracaoTarefaItem(value, index)"
+                    @na-limpeza="naLimpeza(index)"/>
+
+        <div class="tarefa-lista-footer" v-if="tarefaLista.length || filtro">
             <div>
-                <strong></strong>
-                <span></span>
+                <strong>{{ tarefaLista.length }}</strong>
+                <span>{{ marcadorContador }}</span>
             </div>
             <nav class="tarefa-lista-nav">
-                    <router-link to="" class="tarefa-lista-nav-item">Todas</router-link>
-                    <router-link to="" class="tarefa-lista-nav-item">Ativo</router-link>
-                    <router-link to="" class="tarefa-lista-nav-item">Completa</router-link>
+                    <router-link :to="{ name: 'home' }" class="tarefa-lista-nav-item">Todas</router-link>
+                    <router-link :to="{ name: 'ativo' }" class="tarefa-lista-nav-item">Ativo</router-link>
+                    <router-link :to="{ name: 'completa' }" class="tarefa-lista-nav-item">Completa</router-link>
             </nav>
-            <div class="tarefa-lista-limpar">
-                <a href="#">Limpeza completa</a>
+            <div class="tarefa-lista-limpar" :class="{'tarefa-lista-limpar-show': exibirBotaoConcluido && !filtro}">
+                <a href="#" @click.prevent="limparCompletaItens">Limpeza completa</a>
             </div>
         </div>
     </main>
@@ -24,7 +28,7 @@
 <script>
 import TarefaItem from '@/components/Tarefa-Item.vue'
 import { computed, reactive, toRefs, watch } from 'vue'
-import { getTarefaLista, setTarefaItem } from '@/models/TarefaLista'
+import { getTarefaLista, setTarefaItem, setTarefaLista, marcarTodasTarefas } from '@/models/TarefaLista'
 
 export default {
     name: 'TarefaLista',
@@ -49,18 +53,29 @@ export default {
             principalCheckbox: false,
             novaTarefa: '',
             tarefaValor: '',
-            exibirBotaoComcluido: false,
+            exibirBotaoConcluido: false,
             marcadorContador: computed(() => {
 
                 const label = estado.tarefaLista.length === 1 ? 'item' : 'itens'
 
-                return `${label} left`
+                return `${ label } restante`
             })
         })
+
+        watch(
+            () => estado.tarefaLista,
+            lista => {
+                estado.exibirBotaoConcluido = lista.some(({ completa }) => completa)
+                estado.principalCheckbox = lista.every(({ completa }) => completa)
+            },
+            { deep: true}
+        )
         watch(
             () => props.filtro,
             () => { filtroTarefaLista }
         )
+
+        const naLimpeza = index => estado.tarefaLista.splice(index, 1)
         
         const naEntradaChave = event => {
 
@@ -73,12 +88,37 @@ export default {
 
             }
         }
+        const naAlteracaoTarefaItem = (value, index) => {
+            estado.tarefaLista[index].completa = value 
+            setTarefaLista(estado.tarefaLista)
+            filtroTarefaLista()
+        }
+
+        const naAtualizacaoTarefaItem = (value, index) => {
+
+            if(!value) estado.tarefaLista.splice(index, 1)
+            else estado.tarefaLista[index].titulo = value 
+
+            setTarefaLista(estado.tarefaLista)
+        }
         const filtroTarefaLista = () => {
             
             if (!props.filtro) return estado.tarefaLista = getTarefaLista()
+
+            estado.tarefaLista = getTarefaLista().filter(({ completa }) => {
+                return props.filtro === 'ativo' ? !completa: completa
+            })
         }
 
-        return { ...toRefs(estado), naEntradaChave}
+        const limparCompletaItens = () => {
+            estado.tarefaLista = getTarefaLista().filter(({ completa }) => !completa)
+        }
+        const naAlteracaoPrincipalCheckbox = () => {
+            marcarTodasTarefas(estado.principalCheckbox)
+            estado.tarefaLista = getTarefaLista()
+        }
+
+        return { ...toRefs(estado), naLimpeza, naEntradaChave, naAlteracaoTarefaItem, naAtualizacaoTarefaItem, naAlteracaoPrincipalCheckbox, limparCompletaItens}
     }
 }
 </script>

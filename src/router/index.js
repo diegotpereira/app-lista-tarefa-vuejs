@@ -1,18 +1,23 @@
 import { createWebHistory, createRouter } from "vue-router";
-import Home from "@/views/Tarefa-Lista.vue";
-// import About from "@/views/About.vue";
 
 const routes = [
   {
     path: "/",
-    name: "Home",
-    component: Home,
+    name: "home",
+    component: () => import ('../views/Tarefa-Lista.vue')
   },
-//   {
-//     path: "/about",
-//     name: "About",
-//     component: About,
-//   },
+  {
+    path: '/ativo',
+    name: 'ativo',
+    props: { filtro: 'ativo'},
+    component: () => import ('../views/Tarefa-Lista.vue')
+  },
+  {
+    path: '/completa',
+    name: 'completa',
+    props: { filtro: 'completa'},
+    component: () => import ('../views/Tarefa-Lista.vue')
+  }
 ];
 
 const router = createRouter({
